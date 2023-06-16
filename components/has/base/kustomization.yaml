@@ -3,22 +3,16 @@ kind: Kustomization
 resources:
   - ./argocd-roles
   - https://github.com/redhat-appstudio/application-service/config/default?ref=7147e9827cb1faab1ee54bbed7ec0d420647d03c
-
-
 components:
   - ../k-components/manager-resources
   - ../k-components/enable-profiling
-
 images:
   - name: quay.io/redhat-appstudio/application-service
     newName: quay.io/redhat-appstudio/application-service
     newTag: 7147e9827cb1faab1ee54bbed7ec0d420647d03c
-
 configMapGenerator:
   - literals:
-      - GITHUB_ORG=""
+      - GITHUB_ORG=pmacik-testing
     name: github-config
     behavior: replace
-
-
 namespace: application-service
