@@ -2,7 +2,7 @@
   {
     "op": "replace",
     "path": "/data/VAULTHOST",
-    "value": "https://vault-spi-vault.apps-crc.testing"
+    "value": "https://vault-spi-vault.apps.ci-op-61bj95kt-1c995.origin-ci-int-aws.dev.rhcloud.com"
   },
   {
     "op": "add",
