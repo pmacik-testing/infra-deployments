@@ -10,6 +10,7 @@ commonAnnotations:
 resources:
   - git::https://github.com/openshift-pipelines/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service?ref=3233088aa6376cb04689c8ba7b96246f33a4197b
   - git::https://github.com/openshift-pipelines/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service-storage?ref=3233088aa6376cb04689c8ba7b96246f33a4197b
+  - bundleconfigmap-kvs.yaml
 
 patches:
 #  - path: scale-down-exporter.yaml
@@ -17,6 +18,13 @@ patches:
 #      kind: Deployment
 #      name: pipeline-metrics-exporter
 #      namespace: openshift-pipelines
+  - target:
+      kind: Subscription
+      group: operators.coreos.com
+      version: v1alpha1
+      name: openshift-pipelines-operator
+      namespace: openshift-operators
+    path: use-poc-images.yaml
   - path: update-tekton-config-performance.yaml
     target:
       kind: TektonConfig
