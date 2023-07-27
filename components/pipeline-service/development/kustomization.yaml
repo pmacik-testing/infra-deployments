@@ -8,8 +8,8 @@ commonAnnotations:
   argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 
 resources:
-  - git::https://github.com/openshift-pipelines/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service?ref=d0abddfa7f3ca89a09d3c0f59f59ca676c2a3bd3
-  - git::https://github.com/openshift-pipelines/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service-storage?ref=d0abddfa7f3ca89a09d3c0f59f59ca676c2a3bd3
+  - git::https://github.com/openshift-pipelines/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service?ref=1f64281aeaf44cb99372f456740499ce9b40929f
+  - git::https://github.com/openshift-pipelines/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service-storage?ref=1f64281aeaf44cb99372f456740499ce9b40929f
 
 patches:
 #  - path: scale-down-exporter.yaml
@@ -17,6 +17,13 @@ patches:
 #      kind: Deployment
 #      name: pipeline-metrics-exporter
 #      namespace: openshift-pipelines
+#  - target:
+#      kind: Subscription
+#      group: operators.coreos.com
+#      version: v1alpha1
+#      name: openshift-pipelines-operator
+#      namespace: openshift-operators
+#    path: use-110-images.yaml
   - path: update-tekton-config-performance.yaml
     target:
       kind: TektonConfig
