@@ -1157,6 +1157,10 @@ spec:
     port: 9443
     protocol: TCP
     targetPort: metrics
+  - name: profiling
+    port: 6060
+    protocol: TCP
+    targetPort: 6060
   selector:
     app.kubernetes.io/name: tekton-results-api
 ---
@@ -1329,7 +1333,7 @@ spec:
             secretKeyRef:
               key: db.name
               name: tekton-results-database
-        image: quay.io/redhat-appstudio/tekton-results-api:bae7851ff584423503af324200f52cd28ca99116
+        image: quay.io/redhat-appstudio/tekton-results-api:dc54f48f6a1adfde07b923129db33aaa77a61213
         livenessProbe:
           httpGet:
             path: /healthz
@@ -1481,7 +1485,7 @@ spec:
           value: tekton-results-api-service.tekton-pipelines.svc.cluster.local:8080
         - name: AUTH_MODE
           value: token
-        image: quay.io/redhat-appstudio/tekton-results-watcher:bae7851ff584423503af324200f52cd28ca99116
+        image: quay.io/redhat-appstudio/tekton-results-watcher:dc54f48f6a1adfde07b923129db33aaa77a61213
         name: watcher
         ports:
         - containerPort: 9090
