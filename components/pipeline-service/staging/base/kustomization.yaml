@@ -14,6 +14,15 @@ resources:
   - ../../base/testing
   - ../../base/rbac
 
+# generate a new configmap with updated values (logs api, db ssl mode) and replace the default one
+configMapGenerator:
+  - behavior: replace
+    files:
+      - config.env
+    name: api-config
+    options:
+      disableNameSuffixHash: true
+
 patches:
   - path: chains-tekton-config-patches.yaml
     target:
@@ -33,20 +42,10 @@ patches:
     target:
       kind: TektonConfig
       name: config
-#  - path: scale-down-exporter.yaml
-#    target:
-#      kind: Deployment
-#      name: pipeline-metrics-exporter
-#      namespace: openshift-pipelines
   - path: update-tekton-config-performance.yaml
     target:
       kind: TektonConfig
       name: config
-  - path: bump-results-watcher-replicas.yaml
-    target:
-      kind: Deployment
-      namespace: tekton-results
-      name: tekton-results-watcher
   - path: update-results-watcher-performance.yaml
     target:
       kind: Deployment
