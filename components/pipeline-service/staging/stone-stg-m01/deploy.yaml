@@ -926,6 +926,9 @@ data:
     S3_MULTI_PART_SIZE=5242880
     GCS_BUCKET_NAME=
     STORAGE_EMULATOR_HOST=
+    K8S_QPS=50
+    K8S_BURST=100
+    GRPC_WORKER_POOL=50
 kind: ConfigMap
 metadata:
   annotations:
@@ -1402,7 +1405,7 @@ metadata:
   name: tekton-results-watcher
   namespace: tekton-results
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: tekton-results-watcher
@@ -1468,6 +1471,12 @@ spec:
         - -check_owner=false
         - -completed_run_grace_period
         - 10m
+        - -threadiness
+        - "50"
+        - -qps
+        - "50"
+        - -burst
+        - "100"
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:
