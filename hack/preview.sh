@@ -1,7 +1,7 @@
 #!/bin/bash -e
 set -o pipefail
 
-ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/..
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/..
 
 # Print help message
 function print_help() {
@@ -20,31 +20,29 @@ OBO=false
 while [[ $# -gt 0 ]]; do
   key=$1
   case $key in
-    --toolchain)
-      TOOLCHAIN=true
-      shift
-      ;;
-    --keycloak)
-      KEYCLOAK=true
-      shift
-      ;;
-    --obo)
-      OBO=true
-      shift
-      ;;
-    -h|--help)
-      print_help
-      exit 0
-      ;;
-    *)
-      shift
-      ;;
+  --toolchain)
+    TOOLCHAIN=true
+    shift
+    ;;
+  --keycloak)
+    KEYCLOAK=true
+    shift
+    ;;
+  --obo)
+    OBO=true
+    shift
+    ;;
+  -h | --help)
+    print_help
+    exit 0
+    ;;
+  *)
+    shift
+    ;;
   esac
 done
 
-
-
-if $TOOLCHAIN ; then
+if $TOOLCHAIN; then
   echo "Deploying toolchain"
   "$ROOT/hack/sandbox-development-mode.sh"
 
@@ -54,7 +52,7 @@ if $TOOLCHAIN ; then
     BASE_URL=$(oc get ingresses.config.openshift.io/cluster -o jsonpath={.spec.domain})
     RHSSO_URL="https://keycloak-dev-sso.$BASE_URL"
 
-    oc patch ToolchainConfig/config -n toolchain-host-operator --type=merge --patch-file=/dev/stdin << EOF
+    oc patch ToolchainConfig/config -n toolchain-host-operator --type=merge --patch-file=/dev/stdin <<EOF
 spec:
   host:
     registrationService:
@@ -74,72 +72,71 @@ EOF
 fi
 
 if [ -f $ROOT/hack/preview.env ]; then
-    source $ROOT/hack/preview.env
+  source $ROOT/hack/preview.env
 fi
 
 if [ -z "$MY_GIT_FORK_REMOTE" ]; then
-    echo "Set MY_GIT_FORK_REMOTE environment to name of your fork remote"
-    exit 1
+  echo "Set MY_GIT_FORK_REMOTE environment to name of your fork remote"
+  exit 1
 fi
 
 MY_GIT_REPO_URL=$(git ls-remote --get-url $MY_GIT_FORK_REMOTE | sed 's|^git@github.com:|https://github.com/|')
 MY_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 trap "git checkout $MY_GIT_BRANCH" EXIT
 
-
 if echo "$MY_GIT_REPO_URL" | grep -q redhat-appstudio/infra-deployments; then
-    echo "Use your fork repository for preview"
-    exit 1
+  echo "Use your fork repository for preview"
+  exit 1
 fi
 
 # Do not allow to use default github org
 if [ -z "$MY_GITHUB_ORG" ] || [ "$MY_GITHUB_ORG" == "redhat-appstudio-appdata" ]; then
-    echo "Set MY_GITHUB_ORG environment variable"
-    exit 1
+  echo "Set MY_GITHUB_ORG environment variable"
+  exit 1
 fi
 
 if ! git diff --exit-code --quiet; then
-    echo "Changes in working Git working tree, commit them or stash them"
-    exit 1
+  echo "Changes in working Git working tree, commit them or stash them"
+  exit 1
 fi
 
 # Create preview branch for preview configuration
 PREVIEW_BRANCH=preview-${MY_GIT_BRANCH}${TEST_BRANCH_ID+-$TEST_BRANCH_ID}
-if git rev-parse --verify $PREVIEW_BRANCH &> /dev/null; then
-    git branch -D $PREVIEW_BRANCH
+if git rev-parse --verify $PREVIEW_BRANCH &>/dev/null; then
+  git branch -D $PREVIEW_BRANCH
 fi
 git checkout -b $PREVIEW_BRANCH
 
 # patch argoCD applications to point to your fork
-update_patch_file () {
+update_patch_file() {
   local file=${1:?}
 
   yq -i ".[0].value = \"$MY_GIT_REPO_URL\"" "$file"
-  yq -i ".[1].value = \"$PREVIEW_BRANCH\""  "$file"
+  yq -i ".[1].value = \"$PREVIEW_BRANCH\"" "$file"
 }
 update_patch_file "${ROOT}/argo-cd-apps/k-components/inject-infra-deployments-repo-details/application-patch.yaml"
 update_patch_file "${ROOT}/argo-cd-apps/k-components/inject-infra-deployments-repo-details/application-set-patch.yaml"
 
-if $OBO ; then
+if $OBO; then
   echo "Adding Observability operator and Prometheus for federation"
   yq -i '.resources += ["monitoringstack/"]' $ROOT/components/monitoring/prometheus/development/kustomization.yaml
 fi
 
 # delete argoCD applications which are not in DEPLOY_ONLY env var if it's set
 if [ -n "$DEPLOY_ONLY" ]; then
-  APPLICATIONS=$(\
-    oc kustomize argo-cd-apps/overlays/development |\
-    yq e --no-doc 'select(.kind == "ApplicationSet") | .metadata.name'
+  APPLICATIONS=$(
+    oc kustomize argo-cd-apps/overlays/development |
+      yq e --no-doc 'select(.kind == "ApplicationSet") | .metadata.name'
   )
   DELETED=$(yq e --no-doc .metadata.name $ROOT/argo-cd-apps/overlays/development/delete-applications.yaml)
   for APP in $APPLICATIONS; do
-    if ! grep -q "\b$APP\b" <<< $DEPLOY_ONLY && ! grep -q "\b$APP\b" <<< $DELETED; then
+    if ! grep -q "\b$APP\b" <<<$DEPLOY_ONLY && ! grep -q "\b$APP\b" <<<$DELETED; then
       echo Disabling $APP based on DEPLOY_ONLY variable
-      echo '---' >> $ROOT/argo-cd-apps/overlays/development/delete-applications.yaml
+      echo '---' >>$ROOT/argo-cd-apps/overlays/development/delete-applications.yaml
       yq e -n ".apiVersion=\"argoproj.io/v1alpha1\"
                  | .kind=\"ApplicationSet\"
                  | .metadata.name = \"$APP\"
-                 | .\$patch = \"delete\"" >> $ROOT/argo-cd-apps/overlays/development/delete-applications.yaml
+                 | .\$patch = \"delete\"" >>$ROOT/argo-cd-apps/overlays/development/delete-applications.yaml
     fi
   done
 fi
@@ -154,12 +151,12 @@ yq -i e ".0.value=\"$SPI_API_SERVER\"" $ROOT/components/spi/overlays/development
 $ROOT/hack/util-patch-spi-config.sh
 # configure the secrets and providers in SPI
 TMP_FILE=$(mktemp)
-yq e ".serviceProviders[0].type=\"GitHub\"" $ROOT/components/spi/base/config.yaml | \
-    yq e ".serviceProviders[0].clientId=\"${SPI_GITHUB_CLIENT_ID:-app-client-id}\"" - | \
-    yq e ".serviceProviders[0].clientSecret=\"${SPI_GITHUB_CLIENT_SECRET:-app-secret}\"" - | \
-    yq e ".serviceProviders[1].type=\"Quay\"" - | \
-    yq e ".serviceProviders[1].clientId=\"${SPI_QUAY_CLIENT_ID:-app-client-id}\"" - | \
-    yq e ".serviceProviders[1].clientSecret=\"${SPI_QUAY_CLIENT_SECRET:-app-secret}\"" - > $TMP_FILE
+yq e ".serviceProviders[0].type=\"GitHub\"" $ROOT/components/spi/base/config.yaml |
+  yq e ".serviceProviders[0].clientId=\"${SPI_GITHUB_CLIENT_ID:-app-client-id}\"" - |
+  yq e ".serviceProviders[0].clientSecret=\"${SPI_GITHUB_CLIENT_SECRET:-app-secret}\"" - |
+  yq e ".serviceProviders[1].type=\"Quay\"" - |
+  yq e ".serviceProviders[1].clientId=\"${SPI_QUAY_CLIENT_ID:-app-client-id}\"" - |
+  yq e ".serviceProviders[1].clientSecret=\"${SPI_QUAY_CLIENT_SECRET:-app-secret}\"" - >$TMP_FILE
 oc create namespace spi-system --dry-run=client -o yaml | oc apply -f -
 oc create -n spi-system secret generic shared-configuration-file --from-file=config.yaml=$TMP_FILE --dry-run=client -o yaml | oc apply -f -
 echo "SPI configured"
@@ -167,6 +164,7 @@ rm $TMP_FILE
 
 $ROOT/hack/util-set-github-org $MY_GITHUB_ORG
 
+set -x
 domain=$(oc get ingresses.config.openshift.io cluster --template={{.spec.domain}})
 
 rekor_server="rekor.$domain"
@@ -212,12 +210,11 @@ sed -i.bak "s/rekor-server.enterprise-contract-service.svc/$rekor_server/" $ROOT
 [ -n "${MULTI_ARCH_CONTROLLER_IMAGE_TAG}" ] && yq -i e "(.images.[] | select(.name==\"multi-platform-controller\")) |=.newTag=\"${MULTI_ARCH_CONTROLLER_IMAGE_TAG}\"" $ROOT/components/multi-platform-controller/base/kustomization.yaml
 [[ -n "${MULTI_ARCH_CONTROLLER_PR_OWNER}" && "${MULTI_ARCH_CONTROLLER_PR_SHA}" ]] && yq -i e "(.resources[] | select(. ==\"*github.com/redhat-appstudio/multi-platform-controller*\")) |= \"https://github.com/${MULTI_ARCH_CONTROLLER_PR_OWNER}/multi-platform-controller/config/default?ref=${MULTI_ARCH_CONTROLLER_PR_SHA}\"" $ROOT/components/multi-platform-controller/base/kustomization.yaml
 
-
 [[ -n "${PIPELINE_PR_OWNER}" && "${PIPELINE_PR_SHA}" ]] && yq -i e ".resources[] |= sub(\"ref=[^ ]*\"; \"ref=${PIPELINE_PR_SHA}\") | .resources[] |= sub(\"openshift-pipelines\"; \"${PIPELINE_PR_OWNER}\")" $ROOT/components/pipeline-service/development/kustomization.yaml
 
 if ! git diff --exit-code --quiet; then
-    git commit -a -m "Preview mode, do not merge into main"
-    git push -f --set-upstream $MY_GIT_FORK_REMOTE $PREVIEW_BRANCH
+  git commit -a -m "Preview mode, do not merge into main"
+  git push -f --set-upstream $MY_GIT_FORK_REMOTE $PREVIEW_BRANCH
 fi
 
 # Create the root Application
@@ -227,6 +224,8 @@ while [ "$(oc get applications.argoproj.io all-application-sets -n openshift-git
   echo Waiting for sync of all-application-sets argoCD app
   sleep 5
 done
+
+set +x
 
 # Init Vault
 $ROOT/hack/spi/vault-init.sh
@@ -255,33 +254,33 @@ while :; do
   NOT_DONE=$(echo "$STATE" | grep -v "Synced[[:blank:]]*Healthy" || true)
   echo "$NOT_DONE"
   if [ -z "$NOT_DONE" ]; then
-     echo All Applications are synced and Healthy
-     break
+    echo All Applications are synced and Healthy
+    break
   else
-     UNKNOWN=$(echo "$NOT_DONE" | grep Unknown | grep -v Progressing | cut -f1 -d ' ') || :
-     if [ -n "$UNKNOWN" ]; then
-       for app in $UNKNOWN; do
-         ERROR=$(oc get -n openshift-gitops applications.argoproj.io $app -o jsonpath='{.status.conditions}')
-         if echo "$ERROR" | grep -q 'context deadline exceeded'; then
-           echo Refreshing $app
-           oc patch applications.argoproj.io $app -n openshift-gitops --type merge -p='{"metadata": {"annotations":{"argocd.argoproj.io/refresh": "soft"}}}'
-           while [ -n "$(oc get applications.argoproj.io -n openshift-gitops $app -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/refresh}')" ]; do
-             sleep 5
-           done
-           echo Refresh of $app done
-           continue 2
-         fi
-         echo $app failed with:
-         if [ -n "$ERROR" ]; then
-           echo "$ERROR"
-         else
-           oc get -n openshift-gitops applications.argoproj.io $app -o yaml
-         fi
-       done
-       exit 1
-     fi
-     echo Waiting $INTERVAL seconds for application sync
-     sleep $INTERVAL
+    UNKNOWN=$(echo "$NOT_DONE" | grep Unknown | grep -v Progressing | cut -f1 -d ' ') || :
+    if [ -n "$UNKNOWN" ]; then
+      for app in $UNKNOWN; do
+        ERROR=$(oc get -n openshift-gitops applications.argoproj.io $app -o jsonpath='{.status.conditions}')
+        if echo "$ERROR" | grep -q 'context deadline exceeded'; then
+          echo Refreshing $app
+          oc patch applications.argoproj.io $app -n openshift-gitops --type merge -p='{"metadata": {"annotations":{"argocd.argoproj.io/refresh": "soft"}}}'
+          while [ -n "$(oc get applications.argoproj.io -n openshift-gitops $app -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/refresh}')" ]; do
+            sleep 5
+          done
+          echo Refresh of $app done
+          continue 2
+        fi
+        echo $app failed with:
+        if [ -n "$ERROR" ]; then
+          echo "$ERROR"
+        else
+          oc get -n openshift-gitops applications.argoproj.io $app -o yaml
+        fi
+      done
+      exit 1
+    fi
+    echo Waiting $INTERVAL seconds for application sync
+    sleep $INTERVAL
   fi
 done
 
@@ -290,11 +289,11 @@ done
 # More info: https://tekton.dev/docs/operator/tektonconfig/#tekton-config
 while :; do
   STATE=$(oc get tektonconfig config -o json | jq -r '.status.conditions[] | select(.type == "Ready")')
-  [ "$(jq -r '.status' <<< "$STATE")" == "True" ] && echo All required tekton resources are installed and ready && break
+  [ "$(jq -r '.status' <<<"$STATE")" == "True" ] && echo All required tekton resources are installed and ready && break
   echo Some tekton resources are not ready yet:
-  jq -r '.message' <<< "$STATE"
+  jq -r '.message' <<<"$STATE"
   # start temporary work around for https://issues.redhat.com/browse/SRVKP-3245
-  MSG=$(jq -r '.message' <<< "$STATE")
+  MSG=$(jq -r '.message' <<<"$STATE")
   if echo "$MSG" | grep -q 'Components not in ready state: OpenShiftPipelinesAsCode: reconcile again and proceed'; then
     if [[ "$(oc get deployment/pipelines-as-code-controller -n openshift-pipelines -o jsonpath='{.status.conditions[?(@.type=="Available")].status}')" != "True" ]]; then
       echo "pipelines-as-code-controller still not available"
@@ -315,23 +314,22 @@ while :; do
   sleep $INTERVAL
 done
 
-
-if $KEYCLOAK && $TOOLCHAIN ; then
+if $KEYCLOAK && $TOOLCHAIN; then
   echo "Restarting toolchain registration service to pick up keycloak's certs."
   oc rollout restart StatefulSet/keycloak -n dev-sso
   oc wait --for=condition=Ready pod/keycloak-0 -n dev-sso --timeout=5m
 
   oc delete deployment/registration-service -n toolchain-host-operator
   # Wait for the new deployment to be available
-  timeout --foreground 5m bash  <<- "EOF"
+  timeout --foreground 5m bash <<-"EOF"
 		while [[ "$(oc get deployment/registration-service -n toolchain-host-operator -o jsonpath='{.status.conditions[?(@.type=="Available")].status}')" != "True" ]]; do
 			echo "Waiting for registration-service to be available again"
 			sleep 2
 		done
 		EOF
   if [ $? -ne 0 ]; then
-	  echo "Timed out waiting for registration-service to be available"
-	  exit 1
+    echo "Timed out waiting for registration-service to be available"
+    exit 1
   fi
 fi
 
@@ -353,4 +351,3 @@ done
 
 # Configure Pipelines as Code and required credentials
 $ROOT/hack/build/setup-pac-integration.sh
-

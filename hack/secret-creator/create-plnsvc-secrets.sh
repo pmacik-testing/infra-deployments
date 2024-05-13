@@ -22,10 +22,10 @@ create_db_secret() {
         return
     fi
     kubectl create secret generic -n tekton-results tekton-results-database \
-      --from-literal=db.user=tekton \
-      --from-literal=db.password="$(openssl rand -base64 20)" \
-      --from-literal=db.host="postgres-postgresql.tekton-results.svc.cluster.local" \
-      --from-literal=db.name="tekton_results"
+        --from-literal=db.user=tekton \
+        --from-literal=db.password="$(openssl rand -base64 20)" \
+        --from-literal=db.host="postgres-postgresql.tekton-results.svc.cluster.local" \
+        --from-literal=db.name="tekton_results"
 }
 
 create_s3_secret() {
@@ -34,34 +34,12 @@ create_s3_secret() {
         echo "S3 secret already exists, skipping creation"
         return
     fi
-    USER=minio
-    PASS="$(openssl rand -base64 20)"
     kubectl create secret generic -n tekton-results tekton-results-s3 \
-      --from-literal=aws_access_key_id="$USER" \
-      --from-literal=aws_secret_access_key="$PASS" \
-      --from-literal=aws_region='not-applicable' \
-      --from-literal=bucket=tekton-results \
-      --from-literal=endpoint='https://minio.tekton-results.svc.cluster.local'
-
-    echo "Creating MinIO config" >&2
-    if kubectl get secret -n tekton-results minio-storage-configuration &>/dev/null; then
-        echo "MinIO config already exists, skipping creation"
-        return
-    fi
-    cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: minio-storage-configuration
-  namespace: tekton-results
-type: Opaque
-stringData:
-  config.env: |-
-    export MINIO_ROOT_USER="$USER"
-    export MINIO_ROOT_PASSWORD="$PASS"
-    export MINIO_STORAGE_CLASS_STANDARD="EC:2"
-    export MINIO_BROWSER="on"
-EOF
+        --from-literal=aws_access_key_id="$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/aws_access_key_id)" \
+        --from-literal=aws_secret_access_key="$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/aws_secret_access_key)" \
+        --from-literal=aws_region="$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/aws_region)" \
+        --from-literal=bucket="$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/aws_s3_bucket)" \
+        --from-literal=endpoint="$(cat /usr/local/ci-secrets/redhat-appstudio-load-test/aws_s3_endpoint)"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
