@@ -8,8 +8,8 @@ commonAnnotations:
   argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 
 resources:
-  - https://github.com/gabemontero/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service?ref=test-latest-watcher-leak-fix
-  - https://github.com/gabemontero/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service-storage?ref=test-latest-watcher-leak-fix
+  - https://github.com/pmacik/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service?ref=c72a8f292a154c5c8095bc024902aa9bdfbd6527
+  - https://github.com/pmacik/pipeline-service.git/developer/openshift/gitops/argocd/pipeline-service-storage?ref=c72a8f292a154c5c8095bc024902aa9bdfbd6527
   - ../base/rbac
   - tekton-pipelines-controller-pods-log-access-rbac.yaml
 
@@ -27,11 +27,11 @@ patches:
     target:
       kind: TektonConfig
       name: config
-#  - path: scale-down-exporter.yaml
-#    target:
-#      kind: Deployment
-#      name: pipeline-metrics-exporter
-#      namespace: openshift-pipelines
+  #  - path: scale-down-exporter.yaml
+  #    target:
+  #      kind: Deployment
+  #      name: pipeline-metrics-exporter
+  #      namespace: openshift-pipelines
   - path: update-tekton-config-performance.yaml
     target:
       kind: TektonConfig
